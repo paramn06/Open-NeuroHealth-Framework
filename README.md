@@ -58,7 +58,7 @@ To make brain health accessible, measurable, and improvable for every human thro
 
 | `docs/` | Diagrams, ethics, white paper |
 
-
+| `modules/` | disease-specific code (stroke features, fusion, UI) | 
 
 ---
 
