@@ -100,7 +100,8 @@ def compute_asymmetry_from_landmarks(landmarks, image_shape):
 # ---- end replacement ----
 
 def run_webcam(save_path="data/exports/neuro_unit_face_ai.json"):
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  
+
     if not cap.isOpened():
         print("❌ Could not open webcam.")
         return
@@ -182,5 +183,103 @@ def run_webcam(save_path="data/exports/neuro_unit_face_ai.json"):
     cap.release()
     cv2.destroyAllWindows()
 
+def run_webcam(save_path="data/exports/neuro_unit_face_ai_avg.json"):
+        import time
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            print("❌ Could not open webcam.")
+            return
+
+        with mp_face_mesh.FaceMesh(
+            static_image_mode=False,
+            max_num_faces=1,
+            refine_landmarks=True,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5
+        ) as face_mesh:
+
+            print("📷 Running. Press 'r' to start/stop recording, 's' to save avg AI, 'q' to quit.")
+            recording = False
+            ai_log = []
+            start_time = None
+
+            while True:
+                ok, frame = cap.read()
+                if not ok:
+                    break
+
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = face_mesh.process(frame_rgb)
+
+                if results.multi_face_landmarks:
+                    fl = results.multi_face_landmarks[0]
+                    mp_drawing.draw_landmarks(
+                        frame, fl, mp_face_mesh.FACEMESH_TESSELATION,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+                    )
+
+                    ai, details = compute_asymmetry_from_landmarks(fl.landmark, frame.shape)
+                    if recording:
+                        ai_log.append(ai)
+
+                    cv2.putText(frame, f"AI: {ai:.3f}", (10, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+                else:
+                    cv2.putText(frame, "Face not detected", (10, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+
+                if recording:
+                    cv2.putText(frame, "REC", (550, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+
+                cv2.imshow("Face Asymmetry (AI Averaging)", frame)
+                key = cv2.waitKey(1) & 0xFF
+
+                if key == ord('r'):
+                    if not recording:
+                        ai_log = []
+                        start_time = time.time()
+                        recording = True
+                        print("🎥 Recording started...")
+                    else:
+                        recording = False
+                        duration = time.time() - start_time
+                        print(f"🛑 Recording stopped. {len(ai_log)} samples, {duration:.1f}s")
+
+                elif key == ord('s'):
+                    if ai_log:
+                        avg_ai = float(np.mean(ai_log))
+                        duration = time.time() - start_time if start_time else 0
+                        record = {
+                            "id": str(uuid.uuid4()),
+                            "module": "stroke",
+                            "timestamp": datetime.utcnow().isoformat() + "Z",
+                            "signals": {
+                                "face_asymmetry_avg": avg_ai,
+                                "samples": len(ai_log),
+                                "duration_sec": duration
+                            },
+                            "device": "webcam",
+                            "notes": "AI average session"
+                        }
+
+                        import json, os
+                        os.makedirs("data/exports", exist_ok=True)
+                        with open(save_path, "w", encoding="utf-8") as f:
+                            json.dump(record, f, indent=2)
+                        print(f"✅ Saved averaged AI JSON → {save_path}")
+                    else:
+                        print("⚠️ No recorded samples to save.")
+
+                elif key == ord('q'):
+                    break
+
+            cap.release()
+            cv2.destroyAllWindows()
+
+
 if __name__ == "__main__":
-    run_webcam()
+        print("Launching StrokeAI webcam…")
+        run_webcam()
