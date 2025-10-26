@@ -10,3 +10,18 @@ Completed: repo setup, commits, Git-GitHub integration, ready for .gitignore and
 - Verified dependencies
 - Implemented static & webcam asymmetry detection
 - Next: average multi-frame AI (Day 3)
+# Progress – Day 3 (StrokeAI / ONF)
+
+## What I did
+- Ran live face asymmetry demo (MediaPipe + OpenCV).
+- Recorded 5–10s session; exported averaged Neuro Unit JSON.
+- Verified environment and exported environment.yml (reproducible setup).
+- Ensured .gitignore keeps data/exports out of git history.
+
+## Evidence / Artifacts
+- JSON: data/exports/neuro_unit_face_ai_avg.json
+- Env: environment.yml
+
+## Notes
+- AI average looked stable in neutral/smile.
+- Next: add CSV session logging + simple plot of AI vs time.

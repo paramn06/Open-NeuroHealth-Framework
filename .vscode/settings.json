@@ -1,3 +1,7 @@
 {
     "terminal.integrated.environmentChangesIndicator": "on"
 }
+{
+  "python.defaultInterpreterPath": "%USERPROFILE%/miniconda3/envs/open-neurohealth/python.exe",
+  "python.terminal.activateEnvironment": true
+}
