@@ -39,6 +39,8 @@ def main():
         print("2) Plot latest session CSV")
         print("3) Camera probe")
         print("4) System check")
+        print("5) Record speech (syll/sec JSON)")
+        print("6) Fuse Face + Speech (risk JSON)")
         print("q) Quit")
         choice = input("Select: ").strip().lower()
         if choice == "1":
@@ -49,6 +51,11 @@ def main():
             cam_probe()
         elif choice == "4":
             system_check()
+        elif choice == "5":
+            run_speech()
+        elif choice == "6":
+            fuse_face_speech()
+   
         elif choice == "q":
             break
         else:
@@ -57,3 +64,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+def run_speech():
+    mod = "modules.stroke.features.speech_rate"
+    return subprocess.call([sys.executable, "-m", mod])
+
+def fuse_face_speech():
+    mod = "modules.stroke.fusion.fuse_face_speech"
+    return subprocess.call([sys.executable, "-m", mod])
