@@ -25,3 +25,11 @@ Completed: repo setup, commits, Git-GitHub integration, ready for .gitignore and
 ## Notes
 - AI average looked stable in neutral/smile.
 - Next: add CSV session logging + simple plot of AI vs time.
+
+
+# Progress_Day5.md
+✅ Day 5 Summary:
+- Completed stable StrokeAI NetLag HUD system.
+- Verified FPS tracking, AI symmetry computation, and auto CSV + JSON export.
+- Confirmed robust directory handling with absolute paths.
+- Ready for stability tests and integration with multi-sensor fusion.
