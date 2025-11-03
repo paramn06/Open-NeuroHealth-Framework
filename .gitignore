@@ -1,0 +1,24 @@
+﻿# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual envs
+.venv/
+.env/
+env/
+open-neurohealth/
+
+# Data outputs
+data/exports/
+data/logs/
+data/plots/
+
+# VS Code local files
+.vscode/*
+!.vscode/settings.json
+
+# OS junk
+.DS_Store
+Thumbs.db

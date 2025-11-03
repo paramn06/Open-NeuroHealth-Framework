@@ -1,0 +1,17 @@
+﻿Title: Open NeuroHealth Framework (StrokeAI prototype)
+Author/Claimant: Parameshwar
+Year of creation: 2025
+
+Statement:
+I, Parameshwar, am the author of the original software code and documentation included in this submission.
+This deposit contains my authored source files only. Third-party libraries, package managers, and build
+artifacts are excluded (e.g., .venv, site-packages, pip, __pycache__, data/exports, data/logs).
+
+Scope:
+This code covers the ONF core demo, stroke face asymmetry module, speech-rate module, fusion prototype, and
+supporting tools as organized in the repository.
+
+Contact: 8304991724 param06eshwar@gmail.com 
+
+Signature: PARAMESHWAR 
+Date: 2025-11-04 

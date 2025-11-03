@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NeuroUnit",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"},
+    "module": {"type": "string", "enum": ["stroke"]},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "signals": {
+      "type": "object",
+      "properties": {
+        "face_asymmetry": {"type": "number"},
+        "speech_rate": {"type": "number"},
+        "arm_drift": {"type": "number"}
+      }
+    },
+    "device": {"type": "string"},
+    "notes": {"type": "string"}
+  },
+  "required": ["id","module","timestamp","signals"]
+}
