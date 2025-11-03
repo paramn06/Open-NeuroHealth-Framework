@@ -1,0 +1,14 @@
+Copyright © 2025 Parameshwar
+All rights reserved.
+
+Title of Work: Open NeuroHealth Framework
+Version: v1.0 (Day 7 Prototype)
+Language: Python
+Nature of Work: Original computer program integrating AI-based facial
+asymmetry and speech rate analysis modules for neuro-diagnostic
+applications and awareness research.
+
+This software and documentation are protected under the Copyright Act, 1957.
+Unauthorized reproduction, distribution, or modification in any form is prohibited.
+
+Author retains moral and intellectual rights to the work.

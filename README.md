@@ -104,3 +104,12 @@ Personal Website: https://www.paramn06.in/
 
 
 
+Open NeuroHealth Framework
+Version: v1.0 (Day 7 Prototype)
+Copyright © 2025 Parameshwar
+
+A modular AI framework for neuro-diagnostic and awareness research.
+Includes stroke facial asymmetry and speech rate modules.
+
+Developed using: Python, OpenCV, Mediapipe, NumPy, SciPy, SoundDevice
+Date: November 2025

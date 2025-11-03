@@ -1,36 +1,46 @@
-﻿import os, sys, glob, subprocess, platform, json
+﻿# -------------------------------------------------------------
+#  Open NeuroHealth Framework © 2025 Parameshwar
+#  Author: Parameshwar  |  Version: 1.0 (Day 7 Build)
+#  Licensed under the MIT License
+#  This software is an original work developed for
+#  neuro-diagnostic and research awareness applications.
+# -------------------------------------------------------------
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.abspath(os.path.join(ROOT, ".."))  # repo root
-TOOLS = os.path.join(ROOT, "tools")
-LOG_DIR = os.path.join(ROOT, "data", "logs")
+# app/strokeai_demo.py
+# Open NeuroHealth — StrokeAI Demo Launcher
 
-def latest_csv():
-    files = glob.glob(os.path.join(LOG_DIR, "face_ai_session_*.csv"))
-    return max(files, key=os.path.getmtime) if files else None
+import sys, os, subprocess, glob
+
+PY = sys.executable
 
 def run_strokeai():
-    mod = "modules.stroke.features.face_asymmetry"
-    return subprocess.call([sys.executable, "-m", mod])
+    print("\n🎥 Launching StrokeAI (webcam)…\n")
+    subprocess.run([PY, "modules/stroke/features/face_asymmetry.py"])
 
 def plot_latest():
-    csv_path = latest_csv()
-    if not csv_path:
-        print("❌ No CSV found in data/logs. Record a session first (menu option 1).")
-        return 1
-    py = os.path.join(TOOLS, "plot_ai.py")
-    return subprocess.call([sys.executable, py, csv_path])
+    print("\n📈 Plotting latest CSV…\n")
+    paths = glob.glob("data/logs/face_ai_session_*.csv")
+    if not paths:
+        print("⚠️ No CSV found in data/logs. Record once with option 1.")
+        return
+    latest = max(paths, key=os.path.getmtime)
+    subprocess.run([PY, "tools/plot_ai.py", latest])
 
 def cam_probe():
-    py = os.path.join(TOOLS, "cam_probe.py")
-    return subprocess.call([sys.executable, py])
+    print("\n🔎 Camera probe…\n")
+    subprocess.run([PY, "tools/cam_probe.py"])
 
 def system_check():
-    py = os.path.join(TOOLS, "system_check.py")
-    if not os.path.isfile(py):
-        print("⚠️ tools/system_check.py not found.")
-        return 1
-    return subprocess.call([sys.executable, py])
+    print("\n🧪 System check…\n")
+    subprocess.run([PY, "tools/system_check.py"])
+
+def run_speech():
+    print("\n🎙️ Speech rate recorder…\n")
+    subprocess.run([PY, "modules/stroke/features/speech_rate.py"])
+
+def fuse_face_speech():
+    print("\n🧠 Fusing Face + Speech signals…\n")
+    subprocess.run([PY, "modules/stroke/fusion/fuse_face_speech.py"])
 
 def main():
     while True:
@@ -43,6 +53,7 @@ def main():
         print("6) Fuse Face + Speech (risk JSON)")
         print("q) Quit")
         choice = input("Select: ").strip().lower()
+
         if choice == "1":
             run_strokeai()
         elif choice == "2":
@@ -55,19 +66,10 @@ def main():
             run_speech()
         elif choice == "6":
             fuse_face_speech()
-   
         elif choice == "q":
             break
         else:
-            print("Invalid choice.")
-    print("Bye.")
+            print("❓ Not a valid option.")
 
 if __name__ == "__main__":
     main()
-def run_speech():
-    mod = "modules.stroke.features.speech_rate"
-    return subprocess.call([sys.executable, "-m", mod])
-
-def fuse_face_speech():
-    mod = "modules.stroke.fusion.fuse_face_speech"
-    return subprocess.call([sys.executable, "-m", mod])

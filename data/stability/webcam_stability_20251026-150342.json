@@ -1,0 +1,55 @@
+{
+  "runs": [
+    {
+      "ok": true,
+      "frames": 210,
+      "duration_sec": 8.31,
+      "fps_avg": 108.12,
+      "fps_min": 18.43,
+      "fps_p10": 61.94,
+      "fps_p90": 143.43,
+      "ai_count": 210,
+      "ai_mean": 0.00654,
+      "ai_std": 0.0032,
+      "no_face_frames": 0,
+      "backend": "DSHOW",
+      "device_index": 0,
+      "session": 1,
+      "ts": "2025-10-26T15:03:52.022396Z"
+    },
+    {
+      "ok": true,
+      "frames": 234,
+      "duration_sec": 8.37,
+      "fps_avg": 72762.32,
+      "fps_min": 19.33,
+      "fps_p10": 67.31,
+      "fps_p90": 275.79,
+      "ai_count": 234,
+      "ai_mean": 0.01341,
+      "ai_std": 0.00383,
+      "no_face_frames": 0,
+      "backend": "MSMF",
+      "device_index": 0,
+      "session": 2,
+      "ts": "2025-10-26T15:04:01.709361Z"
+    },
+    {
+      "ok": true,
+      "frames": 228,
+      "duration_sec": 15.36,
+      "fps_avg": 84.25,
+      "fps_min": 10.29,
+      "fps_p10": 37.55,
+      "fps_p90": 136.21,
+      "ai_count": 228,
+      "ai_mean": 0.07113,
+      "ai_std": 0.07507,
+      "no_face_frames": 0,
+      "backend": "DSHOW",
+      "device_index": 0,
+      "session": 3,
+      "ts": "2025-10-26T15:04:17.386345Z"
+    }
+  ]
+}

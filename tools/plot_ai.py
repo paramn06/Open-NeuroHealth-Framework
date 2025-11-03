@@ -1,4 +1,11 @@
-﻿import csv, sys, os, glob
+﻿# -------------------------------------------------------------
+#  Open NeuroHealth Framework © 2025 Parameshwar
+#  Author: Parameshwar  |  Version: 1.0 (Day 7 Build)
+#  Licensed under the MIT License
+#  This software is an original work developed for
+#  neuro-diagnostic and research awareness applications.
+# -------------------------------------------------------------
+import csv, sys, os, glob
 import numpy as np
 import matplotlib.pyplot as plt
 

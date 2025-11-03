@@ -1,3 +1,10 @@
+# -------------------------------------------------------------
+#  Open NeuroHealth Framework © 2025 Parameshwar
+#  Author: Parameshwar  |  Version: 1.0 (Day 7 Build)
+#  Licensed under the MIT License
+#  This software is an original work developed for
+#  neuro-diagnostic and research awareness applications.
+# -------------------------------------------------------------
 # tools/env_check.py
 import sys, platform, os, importlib
 print("🧪 Open NeuroHealth – Environment Check\n")

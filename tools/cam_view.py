@@ -1,4 +1,12 @@
-﻿import cv2
+﻿# -------------------------------------------------------------
+#  Open NeuroHealth Framework © 2025 Parameshwar
+#  Author: Parameshwar  |  Version: 1.0 (Day 7 Build)
+#  Licensed under the MIT License
+#  This software is an original work developed for
+#  neuro-diagnostic and research awareness applications.
+# -------------------------------------------------------------
+
+import cv2
 
 # Try DSHOW first; switch to CAP_MSMF if needed
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
