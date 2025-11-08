@@ -1,115 +1,139 @@
-# Open-NeuroHealth-Framework
-
-A neuroscience ecosystem for early stroke detection, neuro-health monitoring, and open research collaboration.
-
-
-
-\# 🧠 Open NeuroHealth Framework (ONF)
-
-
-
-A unified, ethical, and open neuroscience platform integrating early neurological detection, patient care, research collaboration, and education.
-
-
+# ⚡ SynFAST  
+### Rapid Neuro-AI Stroke Detection System  
+*A module of the Open-NeuroHealth Framework by NeuroSynTech Labs*
 
 ---
 
+## 🧠 Overview
 
+**SynFAST** (Synergic Fast-Acting Neuro AI System) is a lightweight, on-device prototype designed for **real-time stroke detection** using multimodal analysis — **facial asymmetry**, **speech clarity**, and **response dynamics**.
 
-\## 🚀 Vision
-
-To make brain health accessible, measurable, and improvable for every human through open digital neuroscience.
-
-
+Developed as part of the **Open-NeuroHealth Framework**, SynFAST aims to make **early neurological assessment** accessible, fast, and privacy-preserving.
 
 ---
 
+## 🚀 Key Features
 
-
-\## 🧩 Core Modules
-
-1\. \*\*NeuroHealth:\*\* AI-based stroke and neuro-symptom detection via camera, speech, and movement.
-
-2\. \*\*NeuroCare:\*\* Clinical dashboard and rehabilitation tracking.
-
-3\. \*\*NeuroResearch:\*\* Secure data sharing for neuroscience and BBB studies.
-
-4\. \*\*NeuroLearn:\*\* Interactive neuro-learning and awareness platform.
-
-
+- ⚡ **Real-time facial analysis** — detects subtle asymmetry linked to early stroke signs  
+- 🗣️ **Speech clarity & rate assessment** — identifies dysarthria patterns  
+- 🔁 **Modular NeuroSyn pipeline** — integrates face + speech modules in a unified dashboard  
+- ☁️ **Streamlit-based UI** — simple, interactive, and deployable via cloud or local device  
+- 🔒 **Privacy-first** — all data processed locally (no external API dependencies)
 
 ---
 
+## 🧩 System Architecture
 
+Input (Camera / Mic)
+│
+▼
+[Face Module] → Facial Asymmetry Index
+[Speech Module] → Clarity / Rate Metrics
+│
+▼
+[Fusion Engine]
+│
+▼
+Streamlit Dashboard
+│
+▼
+Output: Stroke Likelihood + Logs
 
-\## 📂 Project Structure
-
-| Folder | Description |
-
-|---------|-------------|
-
-| `app/` | Mobile + web app source |
-
-| `data/` | Sample datasets and anonymized examples |
-
-| `models/` | AI models and algorithms |
-
-| `research/` | Notes, experiments, and publications |
-
-| `docs/` | Diagrams, ethics, white paper |
-
-| `modules/` | disease-specific code (stroke features, fusion, UI) | 
-
----
-
-
-
-\## 🔐 Status
-
-This repository is \*\*private and under development\*\*.
-
-Intellectual property belongs to \*\*PARAMESHWAR\*\*.
-
-
+yaml
+Copy code
 
 ---
 
+## 🧪 Tech Stack
 
-
-\## 📅 Timeline
-
-\*\*Phase 1 (3 months):\*\* Facial asymmetry + speech prototype.  
-
-\*\*Phase 2 (6 months):\*\* Multi-modal neuro-detection.  
-
-\*\*Phase 3 (12 months):\*\* Research integration and educational interface.
-
-
+| Component | Technology |
+|------------|-------------|
+| UI / Visualization | Streamlit |
+| AI / CV | OpenCV, Mediapipe, Numpy |
+| Audio Analysis | Librosa / SpeechRecognition |
+| Environment | Python 3.10+ |
+| Hosting | Streamlit Cloud |
+| Domain | [https://synfast.neurohealthlabs.in](https://synfast.neurohealthlabs.in) |
 
 ---
 
+## ⚙️ Quickstart (Local)
 
+```bash
+# 1️⃣ Clone the repository
+git clone https://github.com/paramn06/Open-NeuroHealth-Framework.git
+cd Open-NeuroHealth-Framework
 
-\## 🧠 Creator
+# 2️⃣ Create a conda environment
+conda create -n open-neurohealth python=3.10 -y
+conda activate open-neurohealth
 
-\*\*PARAMESHWAR\*\*  
+# 3️⃣ Install dependencies
+pip install -r requirements.txt
 
-NIUS Biology Fellow | Undergraduate Biotechnology Student  
+# 4️⃣ Launch the SynFAST dashboard
+streamlit run app/onf_dashboard.py
+☁️ Deployment
+This project is deployed via Streamlit Cloud
+🔗 Live Prototype: strokeneurosyn.streamlit.app
+🌐 Custom Domain: synfast.neurohealthlabs.in
 
-Email: paramn2006@gmail.com  
+🧠 Research Context
+SynFAST is a functional prototype (TRL-4) built within the Open-NeuroHealth initiative —
+a modular, open-science framework for building interoperable neuro-AI systems.
 
-LinkedIn: https://www.linkedin.com/in/paramn06/
+This work contributes to:
 
-Personal Website: https://www.paramn06.in/
+Accessible stroke screening for low-resource settings
 
+Integration of biobehavioral biomarkers (face, speech, response)
 
+Laying the foundation for TRL-5 validation & real-world testing
 
-Open NeuroHealth Framework
-Version: v1.0 (Day 7 Prototype)
-Copyright © 2025 Parameshwar
+📈 Current TRL Status
+Phase	Goal	Status
+TRL 3	Module-level integration	✅ Complete
+TRL 4	Functional prototype	✅ Complete
+TRL 5	Validation & limited user testing	🔄 In progress
 
-A modular AI framework for neuro-diagnostic and awareness research.
-Includes stroke facial asymmetry and speech rate modules.
+🧩 Project Structure
+bash
+Copy code
+Open-NeuroHealth-Framework/
+│
+├── app/
+│   ├── onf_dashboard.py          # Streamlit dashboard (SynFAST)
+│   ├── face_module.py
+│   ├── speech_module.py
+│   └── utils/
+│
+├── modules/
+│   └── stroke/features/
+│
+├── tools/
+│   └── system_check.py
+│
+├── docs/
+│   └── TRL4_Validation_Report.md
+│
+├── data/
+│   └── logs/
+│
+├── requirements.txt
+└── README.md
+⚖️ Licensing & Attribution
+© 2025 NeuroSynTech / Open-NeuroHealth Framework
+All rights reserved.
+This prototype is released for academic and research collaboration purposes.
 
-Developed using: Python, OpenCV, Mediapipe, NumPy, SciPy, SoundDevice
-Date: November 2025
+Do not use for clinical diagnosis without regulatory validation.
+
+💬 Contact
+Developer: Parameshwar P.
+Institution: Amrita School of Biotechnology
+Email: contact@neurohealthlabs.in
+Website: https://neurohealthlabs.in
+
+SynFAST — Detect faster. Act sooner. ⚡
+Built under the Open-NeuroHealth Framework for the NeuroSynTech Initiative.
+
