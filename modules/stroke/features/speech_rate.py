@@ -1,40 +1,59 @@
 ﻿# modules/stroke/features/speech_rate.py
 from datetime import datetime
-import uuid, os, json, argparse
+import uuid, os, json, argparse, sys
 import numpy as np
 import sounddevice as sd
 from scipy.signal import medfilt
 
-def record(duration, fs, channels, device=None):
-    print(f"🎙️ Recording {duration}s @ {fs} Hz, ch={channels} ... Speak naturally.")
-    x = sd.rec(int(duration*fs), samplerate=fs, channels=channels, dtype="float32", device=device)
+# --- AGC helpers ------------------------------------------------------------
+def rms(x: np.ndarray) -> float:
+    x = np.asarray(x, dtype=np.float32)
+    return float(np.sqrt(np.mean(np.square(x)) + 1e-12))
+
+def apply_agc(x: np.ndarray, target_rms: float = 0.1, limit: float = 0.999) -> np.ndarray:
+    """Normalize signal to target RMS with soft clip limit."""
+    cur = rms(x)
+    if cur < 1e-9:
+        return x
+    g = target_rms / cur
+    y = np.clip(x * g, -limit, limit)
+    return y
+
+# --- Core functions ---------------------------------------------------------
+def record(duration, fs, channels, device=None, debug=False):
+    if debug:
+        print(f"[DEBUG] Recording {duration}s @ {fs} Hz, ch={channels}, device={device}", file=sys.stderr)
+    x = sd.rec(int(duration * fs), samplerate=fs, channels=channels, dtype="float32", device=device)
     sd.wait()
-    return x[:,0] if channels > 1 else x[:,0]
+    # collapse to mono (channel 0) if multi-channel
+    return x[:, 0] if x.ndim == 2 else x
 
 def frame_signal(x, fs, win_ms=30, hop_ms=10):
-    win = int(fs*win_ms/1000)
-    hop = int(fs*hop_ms/1000)
-    n = max(0, (len(x)-win)//hop + 1)
-    frames = np.stack([x[i*hop:i*hop+win] for i in range(n)], axis=0) if n>0 else np.empty((0,win))
+    win = int(fs * win_ms / 1000)
+    hop = int(fs * hop_ms / 1000)
+    n = max(0, (len(x) - win) // hop + 1)
+    frames = np.stack([x[i * hop : i * hop + win] for i in range(n)], axis=0) if n > 0 else np.empty((0, win))
     return frames, win, hop
 
-def estimate_syllables_per_sec(x, fs):
+def estimate_syllables_per_sec(x, fs, debug=False):
     if x.size == 0:
         return 0.0, 0.0
     frames, win, hop = frame_signal(x, fs)
     if frames.size == 0:
         return 0.0, 0.0
     energy = (frames**2).mean(axis=1)
-    zcr = (np.abs(np.diff(np.sign(frames), axis=1))>0).mean(axis=1)
+    zcr = (np.abs(np.diff(np.sign(frames), axis=1)) > 0).mean(axis=1)
     energy_s = medfilt(energy, kernel_size=7)
     zcr_s = medfilt(zcr, kernel_size=7)
     e_th = np.percentile(energy_s, 65)
     z_th = np.percentile(zcr_s, 35)
     voiced = (energy_s > e_th) & (zcr_s < z_th)
     islands = np.logical_and(voiced, np.concatenate([[False], ~voiced[:-1]])).sum()
-    dur_sec = len(x)/fs
+    dur_sec = len(x) / fs
     voiced_ratio = float(voiced.mean()) if voiced.size else 0.0
     sps = float(islands / max(dur_sec, 1e-6))
+    if debug:
+        print(f"[DEBUG] frames={len(frames)} win={win} hop={hop} e_th={e_th:.4g} z_th={z_th:.4g} islands={islands} dur={dur_sec:.2f}s", file=sys.stderr)
     return sps, voiced_ratio
 
 def save_neuro_unit_speech(sps, voiced_ratio, duration, fs, device_label, path="data/exports/neuro_unit_speech_rate.json"):
@@ -57,13 +76,20 @@ def save_neuro_unit_speech(sps, voiced_ratio, duration, fs, device_label, path="
     print(f"✅ Saved Speech Neuro Unit → {path}")
     return path
 
-def main():
-    ap = argparse.ArgumentParser()
+# --- CLI --------------------------------------------------------------------
+def parse_args():
+    ap = argparse.ArgumentParser(description="Estimate speech rate and voiced ratio; save as Neuro Unit JSON.")
     ap.add_argument("--device", type=int, default=None, help="Input device index (see tools/audio_probe.py)")
-    ap.add_argument("--fs", type=int, default=16000, help="Sample rate")
+    ap.add_argument("--fs", type=int, default=16000, help="Sample rate (Hz)")
     ap.add_argument("--channels", type=int, default=1, help="Channels (1 or 2)")
     ap.add_argument("--duration", type=float, default=5.0, help="Seconds to record")
-    args = ap.parse_args()
+    ap.add_argument("--agc", action="store_true", help="Enable automatic gain control / normalization")
+    ap.add_argument("--debug", action="store_true", help="Verbose debug logging to stderr")
+    ap.add_argument("--agc_rms", type=float, default=0.1, help="Target RMS for AGC (0..1, default 0.1)")
+    return ap.parse_args()
+
+def main():
+    args = parse_args()
 
     # Validate settings before recording
     try:
@@ -71,11 +97,25 @@ def main():
     except Exception as e:
         print("❌ Settings invalid:", e)
         print("Tip: run  python tools\\audio_probe.py  to find working (fs, channels) for your device.")
-        return
+        sys.exit(2)
 
-    x = record(duration=args.duration, fs=args.fs, channels=args.channels, device=args.device)
-    sps, vr = estimate_syllables_per_sec(x, args.fs)
+    x = record(duration=args.duration, fs=args.fs, channels=args.channels, device=args.device, debug=args.debug)
+
+    if args.agc:
+        if args.debug:
+            print(f"[DEBUG] pre-AGC RMS={rms(x):.4f}", file=sys.stderr)
+        x = apply_agc(x, target_rms=args.agc_rms)
+        if args.debug:
+            print(f"[DEBUG] post-AGC RMS={rms(x):.4f}", file=sys.stderr)
+
+    sps, vr = estimate_syllables_per_sec(x, args.fs, debug=args.debug)
     print(f"📏 Estimated speech rate: {sps:.2f} syll/sec (voiced ratio: {vr:.2f})")
+    # --- Quality checks ---
+    if vr < 0.2:
+        print("⚠️ Warning: Low voiced ratio (<0.2). Possible silence or poor mic input.")
+    if sps < 1.0:
+        print("⚠️ Warning: Unusually low speech rate detected. Check audio quality.")
+
     label = f"device={args.device}" if args.device is not None else "default-mic"
     save_neuro_unit_speech(sps, vr, args.duration, args.fs, label)
 

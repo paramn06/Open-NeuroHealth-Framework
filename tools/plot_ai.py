@@ -7,6 +7,8 @@
 # -------------------------------------------------------------
 import csv, sys, os, glob
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # Use a non-interactive backend for Streamlit
 import matplotlib.pyplot as plt
 
 LOG_DIR = "data/logs"
@@ -78,8 +80,6 @@ def main():
     png_path = os.path.join(out_dir, os.path.basename(csv_path).replace(".csv", ".png"))
     plt.savefig(png_path, dpi=160)
     print(f"🖼️ Saved plot → {png_path}")
-
-    plt.show()
 
 if __name__ == "__main__":
     main()
