@@ -296,4 +296,4 @@ else:
             if out_json.exists():
                 st.json(json.load(open(out_json, "r", encoding="utf-8")))
         else:
-            st.warning(f"⚠️ system_check_day9.py exited with code {rc}")ode {rc}")
+            st.warning(f"⚠️ system_check_day9.py exited with code {rc}")
