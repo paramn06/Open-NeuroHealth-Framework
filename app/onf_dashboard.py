@@ -4,9 +4,6 @@ import numpy as np
 from pathlib import Path
 import pandas as pd
 import streamlit as st
-
-# ---------- WebRTC Cloud Video Imports ----------
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, WebRtcMode, RTCConfiguration
 import mediapipe as mp
 
 # ---------- Force UTF-8 for Windows ----------
@@ -31,7 +28,7 @@ with st.sidebar:
     st.header("Modules")
     tab = st.radio(
         "Go to",
-        ["Live Scanner (WebRTC)", "Face (CSV/JSON viewer)", "Speech (JSON viewer)", "Quick tasks"],
+        ["Live Scanner (Cloud Capture)", "Face (CSV/JSON viewer)", "Speech (JSON viewer)", "Quick tasks"],
         index=0
     )
     st.markdown("---")
@@ -89,52 +86,40 @@ def run_py(args_list):
         st.error(f"💥 Unexpected error: {e}")
         return 1
 
-# ---------- WebRTC Cloud Face Scanner ----------
-if tab == "Live Scanner (WebRTC)":
-    st.subheader("🌐 Cloud-Ready Live Facial Asymmetry Scanner")
-    st.write("This module runs securely in your browser and works on mobile devices without crashing the Streamlit Cloud server.")
-    
-    RTC_CONFIGURATION = RTCConfiguration(
-        {
-            "iceServers": [
-                {
-                    "urls": [
-                        "stun:stun.l.google.com:19302",
-                        "stun:stun1.l.google.com:19302",
-                        "stun:stun2.l.google.com:19302",
-                        "stun:stun3.l.google.com:19302",
-                        "stun:global.stun.twilio.com:3478",
-                    ]
-                }
-            ]
-        }
-    )
+# ---------- Native Cloud Camera Facial Asymmetry Scanner ----------
+if tab == "Live Scanner (Cloud Capture)":
+    st.subheader("🌐 Cloud-Ready Facial Asymmetry Scanner")
+    st.write("Take a snapshot using your camera below to instantly compute facial landmarks and F.A.S.T. asymmetry metrics without STUN/TURN network errors.")
 
-    class FaceAsymmetryProcessor(VideoTransformerBase):
-        def __init__(self):
-            self.face_mesh = mp.solutions.face_mesh.FaceMesh(
-                static_image_mode=False,
+    camera_image = st.camera_input("Capture a facial snapshot for stroke analysis")
+
+    if camera_image is not None:
+        try:
+            # Convert uploaded image buffer to OpenCV array
+            bytes_data = camera_image.getvalue()
+            np_arr = np.frombuffer(bytes_data, np.uint8)
+            img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            
+            h, w = img.shape[:2]
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            # Initialize MediaPipe Face Mesh
+            with mp.solutions.face_mesh.FaceMesh(
+                static_image_mode=True,
                 max_num_faces=1,
                 refine_landmarks=True,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5,
-            )
-            self.pairs = [(61, 291), (133, 362), (33, 263)]
-            self.L_EYE_OUT, self.R_EYE_OUT = 33, 263
+                min_detection_confidence=0.5
+            ) as face_mesh:
+                results = face_mesh.process(img_rgb)
+                pairs = [(61, 291), (133, 362), (33, 263)]
+                L_EYE_OUT, R_EYE_OUT = 33, 263
 
-        def _pt_nan(self, landmarks, idx, w, h):
-            try:
-                lm = landmarks[idx]
-                return float(lm.x * w), float(lm.y * h)
-            except Exception:
-                return float("nan"), float("nan")
-
-        def transform(self, frame):
-            try:
-                img = frame.to_ndarray(format="bgr24")
-                h, w = img.shape[:2]
-                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                results = self.face_mesh.process(img_rgb)
+                def _pt_nan(landmarks, idx, w, h):
+                    try:
+                        lm = landmarks[idx]
+                        return float(lm.x * w), float(lm.y * h)
+                    except Exception:
+                        return float("nan"), float("nan")
 
                 if results.multi_face_landmarks:
                     for fl in results.multi_face_landmarks:
@@ -143,15 +128,15 @@ if tab == "Live Scanner (WebRTC)":
                             connection_drawing_spec=mp.solutions.drawing_utils.DrawingSpec(thickness=1, circle_radius=1)
                         )
                         
-                        lx, ly = self._pt_nan(fl.landmark, self.L_EYE_OUT, w, h)
-                        rx, ry = self._pt_nan(fl.landmark, self.R_EYE_OUT, w, h)
+                        lx, ly = _pt_nan(fl.landmark, L_EYE_OUT, w, h)
+                        rx, ry = _pt_nan(fl.landmark, R_EYE_OUT, w, h)
                         
                         if not (math.isnan(lx) or math.isnan(rx)):
                             iod = float(math.hypot(rx - lx, ry - ly)) + 1e-6
                             diffs = []
-                            for L_idx, R_idx in self.pairs:
-                                _Lx, Ly = self._pt_nan(fl.landmark, L_idx, w, h)
-                                _Rx, Ry = self._pt_nan(fl.landmark, R_idx, w, h)
+                            for L_idx, R_idx in pairs:
+                                _Lx, Ly = _pt_nan(fl.landmark, L_idx, w, h)
+                                _Rx, Ry = _pt_nan(fl.landmark, R_idx, w, h)
                                 if not (math.isnan(Ly) or math.isnan(Ry)):
                                     L_vert = abs(Ly - ly) / iod
                                     R_vert = abs(Ry - ry) / iod
@@ -160,21 +145,16 @@ if tab == "Live Scanner (WebRTC)":
                             ai = float(np.mean(diffs)) if diffs else 1.0
                             cv2.putText(img, f"AI Asymmetry Score: {ai:.3f}", (10, 30),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                            st.metric(label="Calculated Facial Asymmetry Score (AI)", value=f"{ai:.4f}")
                 else:
                     cv2.putText(img, "Face not detected", (10, 30),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                return img
-            except Exception:
-                return frame.to_ndarray(format="bgr24")
+                    st.warning("No face detected clearly in the captured snapshot. Please try again.")
 
-    webrtc_streamer(
-        key="stroke-face-scanner-live",
-        mode=WebRtcMode.SENDRECV,
-        rtc_configuration=RTC_CONFIGURATION,
-        video_processor_factory=FaceAsymmetryProcessor,
-        media_stream_constraints={"video": True, "audio": False},
-        async_processing=True,
-    )
+            # Render processed image back to Streamlit
+            st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), channels="RGB", caption="Processed Facial Mesh Analysis")
+        except Exception as e:
+            st.error(f"Error processing image frame: {e}")
 
 # ---------- Face viewer ----------
 elif tab == "Face (CSV/JSON viewer)":
@@ -316,4 +296,4 @@ else:
             if out_json.exists():
                 st.json(json.load(open(out_json, "r", encoding="utf-8")))
         else:
-            st.warning(f"⚠️ system_check_day9.py exited with code {rc}")
+            st.warning(f"⚠️ system_check_day9.py exited with code {rc}")ode {rc}")
