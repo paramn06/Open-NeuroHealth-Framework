@@ -1,14 +1,19 @@
-# app/onf_dashboard.py
-import os, json, glob, subprocess, sys
+import os, json, glob, subprocess, sys, math
+import cv2
+import numpy as np
 from pathlib import Path
 import pandas as pd
 import streamlit as st
+
+# ---------- WebRTC Cloud Video Imports ----------
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, WebRtcMode, RTCConfiguration
+import mediapipe as mp
+
 # ---------- Force UTF-8 for Windows ----------
-# Prevents 'charmap' codec decode errors when reading subprocess output
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 os.environ.setdefault("PYTHONUTF8", "1")
 
-# ---------- Paths (auto-detected; no hard-coded C:\...) ----------
+# ---------- Paths (auto-detected) ----------
 APP_DIR = Path(__file__).resolve().parent
 REPO = APP_DIR.parent                       # project root (parent of /app)
 LOG_DIR = REPO / "data" / "logs"
@@ -26,7 +31,7 @@ with st.sidebar:
     st.header("Modules")
     tab = st.radio(
         "Go to",
-        ["Face (CSV/JSON viewer)", "Speech (JSON viewer)", "Quick tasks"],
+        ["Live Scanner (WebRTC)", "Face (CSV/JSON viewer)", "Speech (JSON viewer)", "Quick tasks"],
         index=0
     )
     st.markdown("---")
@@ -39,37 +44,23 @@ def latest(pattern: str) -> str | None:
     return files[-1] if files else None
 
 def run_py(args_list):
-    """
-    Run a Python script reliably even when the project path contains spaces
-    (e.g., 'C:\\Users\\MY BOOK\\...'). Automatically resolves the script to an
-    absolute path and avoids using 'cwd' to prevent FileNotFound errors.
-    """
-
-    import subprocess, sys, os
-    from pathlib import Path
-    import streamlit as st
-
-    # --- Resolve script path ---
+    """Run a Python script reliably."""
     script = Path(args_list[0])
     if not script.is_absolute():
         script = (REPO / script).resolve()
 
-    # --- Build command ---
     cmd = [sys.executable, str(script)] + [str(a) for a in args_list[1:]]
 
-    # --- Debug info ---
     st.write("```")
     st.write(f"📁 Repo: {REPO}")
     st.write(f"▶️  Command: {cmd}")
     st.write("```")
 
     try:
-        # Environment (force UTF-8 for Windows)
         env = os.environ.copy()
         env.setdefault("PYTHONIOENCODING", "utf-8")
         env.setdefault("PYTHONUTF8", "1")
 
-        # --- Run process safely ---
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -80,13 +71,11 @@ def run_py(args_list):
             env=env,
         )
 
-        # --- Stream real-time output ---
         assert proc.stdout is not None
         for line in proc.stdout:
             st.write(line.rstrip())
         proc.wait()
 
-        # --- Final result ---
         if proc.returncode == 0:
             st.success("✅ Process finished successfully")
         else:
@@ -95,17 +84,87 @@ def run_py(args_list):
 
     except FileNotFoundError as e:
         st.error(f"❌ File not found: {e}")
-        st.info("Check that your file paths exist and that your REPO variable is correct.")
         return 1
-
     except Exception as e:
         st.error(f"💥 Unexpected error: {e}")
         return 1
 
+# ---------- WebRTC Cloud Face Scanner ----------
+if tab == "Live Scanner (WebRTC)":
+    st.subheader("🌐 Cloud-Ready Live Facial Asymmetry Scanner")
+    st.write("This module runs securely in your browser and works on mobile devices without crashing the Streamlit Cloud server.")
+    
+    RTC_CONFIGURATION = RTCConfiguration(
+        {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+    )
 
+    class FaceAsymmetryProcessor(VideoTransformerBase):
+        def __init__(self):
+            self.face_mesh = mp.solutions.face_mesh.FaceMesh(
+                static_image_mode=False,
+                max_num_faces=1,
+                refine_landmarks=True,
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5,
+            )
+            self.pairs = [(61, 291), (133, 362), (33, 263)]
+            self.L_EYE_OUT, self.R_EYE_OUT = 33, 263
+
+        def _pt_nan(self, landmarks, idx, w, h):
+            try:
+                lm = landmarks[idx]
+                return float(lm.x * w), float(lm.y * h)
+            except Exception:
+                return float("nan"), float("nan")
+
+        def transform(self, frame):
+            img = frame.to_ndarray(format="bgr24")
+            h, w = img.shape[:2]
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            results = self.face_mesh.process(img_rgb)
+
+            if results.multi_face_landmarks:
+                for fl in results.multi_face_landmarks:
+                    # Draw basic mesh
+                    mp.solutions.drawing_utils.draw_landmarks(
+                        img, fl, mp.solutions.face_mesh.FACEMESH_TESSELATION,
+                        connection_drawing_spec=mp.solutions.drawing_utils.DrawingSpec(thickness=1, circle_radius=1)
+                    )
+                    
+                    # Math calculation
+                    lx, ly = self._pt_nan(fl.landmark, self.L_EYE_OUT, w, h)
+                    rx, ry = self._pt_nan(fl.landmark, self.R_EYE_OUT, w, h)
+                    
+                    if not (math.isnan(lx) or math.isnan(rx)):
+                        iod = float(math.hypot(rx - lx, ry - ly)) + 1e-6
+                        diffs = []
+                        for L_idx, R_idx in self.pairs:
+                            _Lx, Ly = self._pt_nan(fl.landmark, L_idx, w, h)
+                            _Rx, Ry = self._pt_nan(fl.landmark, R_idx, w, h)
+                            if not (math.isnan(Ly) or math.isnan(Ry)):
+                                L_vert = abs(Ly - ly) / iod
+                                R_vert = abs(Ry - ry) / iod
+                                diffs.append(abs(L_vert - R_vert))
+                        
+                        ai = float(np.mean(diffs)) if diffs else 1.0
+                        cv2.putText(img, f"AI Asymmetry Score: {ai:.3f}", (10, 30),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            else:
+                cv2.putText(img, "Face not detected", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            return img
+
+    webrtc_streamer(
+        key="stroke-face-scanner",
+        mode=WebRtcMode.SENDRECV,
+        rtc_configuration=RTC_CONFIGURATION,
+        video_processor_factory=FaceAsymmetryProcessor,
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True,
+    )
 
 # ---------- Face viewer ----------
-if tab == "Face (CSV/JSON viewer)":
+elif tab == "Face (CSV/JSON viewer)":
     st.subheader("Face Asymmetry Sessions (CSV)")
     col1, col2 = st.columns(2)
 
@@ -119,13 +178,12 @@ if tab == "Face (CSV/JSON viewer)":
         uploaded_csv = st.file_uploader("...or upload a CSV", type=["csv"], key="face_csv_up")
 
         df = None
-        chosen_csv_path = None  # Path to the CSV we’re visualizing
+        chosen_csv_path = None
 
         if uploaded_csv is not None:
             df = pd.read_csv(uploaded_csv)
-            # When uploaded, we only know the *name*, not a repo path
             if getattr(uploaded_csv, "name", None):
-                chosen_csv_path = Path(uploaded_csv.name)  # for PNG naming only
+                chosen_csv_path = Path(uploaded_csv.name)
         elif sel_csv_name:
             chosen_csv_path = (LOG_DIR / sel_csv_name).resolve()
             df = pd.read_csv(chosen_csv_path)
@@ -139,7 +197,6 @@ if tab == "Face (CSV/JSON viewer)":
         else:
             st.info("No CSV selected or file is empty.")
 
-
     with col2:
         st.subheader("Averaged JSON (latest)")
         json_path = EXPORT_DIR / "neuro_unit_face_ai_avg.json"
@@ -147,7 +204,7 @@ if tab == "Face (CSV/JSON viewer)":
             j = json.load(open(json_path, "r", encoding="utf-8"))
             st.json(j)
         else:
-            st.info("No averaged JSON found yet. Press **r** then **s** in the webcam app to generate one.")
+            st.info("No averaged JSON found yet.")
 
         st.markdown("---")
         st.subheader("Saved Plot (PNG)")
@@ -155,24 +212,19 @@ if tab == "Face (CSV/JSON viewer)":
         plots_dir = (REPO / "data" / "plots")
         plots_dir.mkdir(parents=True, exist_ok=True)
 
-        # Guess the PNG name from the selected/uploaded CSV
         png_guess = None
         if chosen_csv_path is not None:
             png_guess = (plots_dir / (chosen_csv_path.stem + ".png")).resolve()
 
-        # Buttons for convenience
         c1, c2 = st.columns(2)
         with c1:
             regen = st.button("Generate plot for this CSV")
         with c2:
             show_latest = st.button("Show latest plot in folder")
 
-        # Generate (or re-generate) the PNG via tools/plot_ai.py if we have a repo CSV
         if regen:
             if chosen_csv_path and chosen_csv_path.exists():
                 rc = run_py(["tools/plot_ai.py", str(chosen_csv_path)])
-
-
 
 # ---------- Speech viewer ----------
 elif tab == "Speech (JSON viewer)":
@@ -199,14 +251,14 @@ elif tab == "Speech (JSON viewer)":
     else:
         st.info("No speech JSON selected or file missing.")
 
-# ---------- Quick tasks (launchers) ----------
+# ---------- Quick tasks ----------
 else:
     st.subheader("Quick tasks (launch CLI in this env)")
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("**Run webcam app (face_asymmetry.py)**")
-        st.caption("Opens a separate OpenCV window. Keys: r=start/stop, c=force-save CSV, s=save avg JSON, q=quit.")
+        st.markdown("**Run webcam app (face_asymmetry.py) - LOCAL ONLY**")
+        st.caption("WARNING: This will crash on Streamlit Cloud. Use the WebRTC tab instead.")
         if st.button("Launch face_asymmetry.py"):
             rc = run_py(["modules/stroke/features/face_asymmetry.py"])
             st.success(f"Exited with code {rc}")
@@ -220,14 +272,13 @@ else:
                 rc = run_py(["tools/plot_ai.py", latest_csv])
                 st.success(f"Plot script finished (code {rc})")
             else:
-                st.warning("No CSV found. Run the webcam first and press **r** then stop.")
+                st.warning("No CSV found.")
 
     with col2:
         st.markdown("**Record speech (JSON)**")
         device = st.number_input("Input device index", value=0, step=1)
         fs = st.selectbox("Sample rate", [16000, 24000, 32000, 44100, 48000], index=4)
         dur = st.slider("Duration (s)", min_value=3, max_value=15, value=5)
-        _agc = st.checkbox("AGC (normalize) + Debug", value=True, help="(UI only; current CLI ignores this)")
 
         if st.button("Record speech now"):
             args = [
@@ -238,9 +289,8 @@ else:
                 "--duration", str(dur),
             ]
             rc = run_py(args)
-            st.success(f"Speech recording finished (code {rc}). Reload the Speech tab to view JSON.")
+            st.success(f"Speech recording finished (code {rc}).")
 
-    # 🧩 Add this block below
     st.markdown("---")
     st.subheader("🧪 System Check (Day 9)")
     st.caption("Runs Face + Speech end-to-end and writes a combined status JSON.")
