@@ -95,7 +95,19 @@ if tab == "Live Scanner (WebRTC)":
     st.write("This module runs securely in your browser and works on mobile devices without crashing the Streamlit Cloud server.")
     
     RTC_CONFIGURATION = RTCConfiguration(
-        {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+        {
+            "iceServers": [
+                {
+                    "urls": [
+                        "stun:stun.l.google.com:19302",
+                        "stun:stun1.l.google.com:19302",
+                        "stun:stun2.l.google.com:19302",
+                        "stun:stun3.l.google.com:19302",
+                        "stun:global.stun.twilio.com:3478",
+                    ]
+                }
+            ]
+        }
     )
 
     class FaceAsymmetryProcessor(VideoTransformerBase):
@@ -118,44 +130,45 @@ if tab == "Live Scanner (WebRTC)":
                 return float("nan"), float("nan")
 
         def transform(self, frame):
-            img = frame.to_ndarray(format="bgr24")
-            h, w = img.shape[:2]
-            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            results = self.face_mesh.process(img_rgb)
+            try:
+                img = frame.to_ndarray(format="bgr24")
+                h, w = img.shape[:2]
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                results = self.face_mesh.process(img_rgb)
 
-            if results.multi_face_landmarks:
-                for fl in results.multi_face_landmarks:
-                    # Draw basic mesh
-                    mp.solutions.drawing_utils.draw_landmarks(
-                        img, fl, mp.solutions.face_mesh.FACEMESH_TESSELATION,
-                        connection_drawing_spec=mp.solutions.drawing_utils.DrawingSpec(thickness=1, circle_radius=1)
-                    )
-                    
-                    # Math calculation
-                    lx, ly = self._pt_nan(fl.landmark, self.L_EYE_OUT, w, h)
-                    rx, ry = self._pt_nan(fl.landmark, self.R_EYE_OUT, w, h)
-                    
-                    if not (math.isnan(lx) or math.isnan(rx)):
-                        iod = float(math.hypot(rx - lx, ry - ly)) + 1e-6
-                        diffs = []
-                        for L_idx, R_idx in self.pairs:
-                            _Lx, Ly = self._pt_nan(fl.landmark, L_idx, w, h)
-                            _Rx, Ry = self._pt_nan(fl.landmark, R_idx, w, h)
-                            if not (math.isnan(Ly) or math.isnan(Ry)):
-                                L_vert = abs(Ly - ly) / iod
-                                R_vert = abs(Ry - ry) / iod
-                                diffs.append(abs(L_vert - R_vert))
+                if results.multi_face_landmarks:
+                    for fl in results.multi_face_landmarks:
+                        mp.solutions.drawing_utils.draw_landmarks(
+                            img, fl, mp.solutions.face_mesh.FACEMESH_TESSELATION,
+                            connection_drawing_spec=mp.solutions.drawing_utils.DrawingSpec(thickness=1, circle_radius=1)
+                        )
                         
-                        ai = float(np.mean(diffs)) if diffs else 1.0
-                        cv2.putText(img, f"AI Asymmetry Score: {ai:.3f}", (10, 30),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            else:
-                cv2.putText(img, "Face not detected", (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            return img
+                        lx, ly = self._pt_nan(fl.landmark, self.L_EYE_OUT, w, h)
+                        rx, ry = self._pt_nan(fl.landmark, self.R_EYE_OUT, w, h)
+                        
+                        if not (math.isnan(lx) or math.isnan(rx)):
+                            iod = float(math.hypot(rx - lx, ry - ly)) + 1e-6
+                            diffs = []
+                            for L_idx, R_idx in self.pairs:
+                                _Lx, Ly = self._pt_nan(fl.landmark, L_idx, w, h)
+                                _Rx, Ry = self._pt_nan(fl.landmark, R_idx, w, h)
+                                if not (math.isnan(Ly) or math.isnan(Ry)):
+                                    L_vert = abs(Ly - ly) / iod
+                                    R_vert = abs(Ry - ry) / iod
+                                    diffs.append(abs(L_vert - R_vert))
+                            
+                            ai = float(np.mean(diffs)) if diffs else 1.0
+                            cv2.putText(img, f"AI Asymmetry Score: {ai:.3f}", (10, 30),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                else:
+                    cv2.putText(img, "Face not detected", (10, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                return img
+            except Exception:
+                return frame.to_ndarray(format="bgr24")
 
     webrtc_streamer(
-        key="stroke-face-scanner",
+        key="stroke-face-scanner-live",
         mode=WebRtcMode.SENDRECV,
         rtc_configuration=RTC_CONFIGURATION,
         video_processor_factory=FaceAsymmetryProcessor,
